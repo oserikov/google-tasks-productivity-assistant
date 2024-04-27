@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 MY_USER_ID = "292749902"
+os.setenv("MY_USER_ID_TG", MY_USER_ID)
 
 service = initialize()
 client = get_openai_client()

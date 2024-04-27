@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import logging
+import os
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -12,7 +13,7 @@ def read_bot_token():
         return file.read().strip()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.effective_user.id) == MY_USER_ID:
+    if str(update.effective_user.id) == os.getenv("MY_USER_ID_TG"):
         await update.message.reply_text('Hi! I am your task management bot. Tell me what you have done, and I can update your tasks!')
     else:
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
