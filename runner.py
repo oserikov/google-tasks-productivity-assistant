@@ -3,7 +3,7 @@ import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 
-import json
+import json, os
 
 from task_management import initialize, display_tasks, add_new_tasks, mark_tasks_as_completed
 from openai_tools import get_openai_client, system_msg, user_msg, get_system_answer
