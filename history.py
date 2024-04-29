@@ -44,6 +44,8 @@ class ConversationHistory:
             json.dump(self.history, f)
 
     def add_message(self, user_id, sender, message):
+        if not isinstance(message, dict):
+            raise ValueError("Message must be a dictionary with fields 'role' and 'content'.")
         if user_id not in self.history:
             self.history[user_id] = []
         self.history[user_id].append({

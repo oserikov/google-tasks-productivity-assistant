@@ -23,75 +23,50 @@ os.environ.setdefault("MY_USER_ID_TG", MY_USER_ID)
 service = initialize()
 task_manager_agent = TaskManagerAgent("gpt-4")
 task_analyzer_agent = TaskAnalyzerAgent("gpt-4")
-
+conv_history = ConversationHistory()
 
 def analyze_message(message):
     tasks = display_tasks(service)
-    print("Tasks obtained:", tasks)
-    response = task_manager_agent.get_system_answer(user_msg=message, tasks=tasks)
-    print("Response obtained:", response)
+    task_manager_agent.update_tasks(tasks)
+    response = task_manager_agent.get_system_answer(user_msg=message)
     logger.info("Response from GPT-4:", response)
     response_json = json.loads(response.content)
-    print("Response JSON obtained:", response_json)
     completed_tasks = response_json.get("completed_tasks", [])
-    print("Completed tasks obtained:", completed_tasks)
     updated_tasks = response_json.get("updated_tasks", [])
-    print("Updated tasks obtained:", updated_tasks)
     new_tasks = response_json.get("new_tasks", [])
-    print("New tasks obtained:", new_tasks)
     return completed_tasks, updated_tasks, new_tasks
 
-def chat_with_gpt(history):
+def chat_with_gpt(history, user_id):
     tasks = display_tasks(service)
-    response = task_analyzer_agent.get_system_answer(user_history=history, tasks=tasks)
+    task_analyzer_agent.update_tasks(tasks)
+    response = task_analyzer_agent.get_system_answer_for_history(history=history, user_id=user_id)
     return response.content
-
-# Global variable to store conversation history
-conv_history = ConversationHistory()
-
-# Load conversation history from file
-try:
-    with open('conversation_history.json', 'r') as f:
-        conversation_history = json.load(f)
-except FileNotFoundError:
-    print("No existing conversation history found.")
 
 def is_task_progress(message):
     return message.lower().startswith('!!progress')
 
 # Message handler function
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("Starting handle_message function")
 
     user_id = str(update.effective_user.id)
     if user_id != MY_USER_ID:
         await update.message.reply_text("Sorry, you are not authorized to use this bot.")
         return
-    print("User ID obtained:", user_id)
 
     tg_message = update.message.text
-    conv_history.add_message(user_id, "user", tg_message)
-    print("Message obtained and put to history:", tg_message)
+    conv_history.add_message(user_id, "user", {'role': 'user', 'content': tg_message})
 
-    print("Starting message analysis")
     # Analyze the message using GPT-4
     if is_task_progress(tg_message):
-        print("Analyzing message")
         completed_tasks, updated_tasks, new_tasks = analyze_message(tg_message)
-        print("Message analyzed")
         mark_tasks_as_completed(completed_tasks, service)
         add_new_tasks(new_tasks, service)
-        print("Keep api updated with new tasks and completed tasks")
 
         # Respond back to the user with the changes
         response_message = create_response_message(completed_tasks, updated_tasks, new_tasks)
-        print("Response message created")
     else:
-        print("Chatting with GPT-4")
-        response_message = chat_with_gpt(conv_history.history[user_id])
-        print("GPT-4 response obtained")
-    print("Sending response message")
-    conv_history.add_message(user_id, "bot", response_message)
+        response_message = chat_with_gpt(conv_history, user_id)
+    conv_history.add_message(user_id, "bot", {'role':'assistant','content':response_message})
     await update.message.reply_text(response_message)
 
 def create_response_message(completed_tasks, updated_tasks, new_tasks):
