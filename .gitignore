@@ -2,4 +2,5 @@ telegram_token.txt
 chatgpt_key.txt
 client_secret.json
 token.json
+conversation_history.json
 dump/*
