@@ -54,7 +54,7 @@ def add_task(service, task_title):
 def dump_tasks(tasks):
     now = datetime.now()
     # Format date and time
-    filename = now.strftime("dump/keep_tasks_%H:%M:%S_%d:%m:%Y.json")
+    filename = now.strftime("dump/keep_tasks_%H:%M:%S_%d_%m_%Y.json")
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     # Dump tasks to JSON file
     with open(filename, 'w') as f:
@@ -68,7 +68,15 @@ def display_tasks(service):
     results = service.tasks().list(tasklist='@default', showHidden=False, showCompleted=False).execute()
     dump_tasks(results)
     items = results.get('items', [])
-
+    next_page_token = results.get('nextPageToken', None)
+    while next_page_token is not None:
+        results2 = service.tasks().list(tasklist='@default', showHidden=False, showCompleted=False, pageToken=next_page_token).execute()
+        items2 = results2.get('items', [])
+        items = items + items2
+        results['items'] = items
+        dump_tasks(results)
+        next_page_token = results2.get('nextPageToken', None)
+    
     if not items:
         logger.info('No incomplete tasks found.')
     else:
