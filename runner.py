@@ -31,9 +31,17 @@ def analyze_message(message):
     response = task_manager_agent.get_system_answer(user_msg=message)
     logger.info("Response from GPT-4:", response)
     response_json = json.loads(response.content)
+    
     completed_tasks = response_json.get("completed_tasks", [])
+    new_tasks_from_completed = [t for t in completed_tasks if t not in tasks]
+    completed_tasks = [t for t in completed_tasks if t in tasks]
+    
     updated_tasks = response_json.get("updated_tasks", [])
+    new_tasks_from_updated = [t for t in updated_tasks if t not in tasks]
+    updated_tasks = [t for t in updated_tasks if t in tasks]
+
     new_tasks = response_json.get("new_tasks", [])
+    new_tasks = new_tasks + new_tasks_from_completed + new_tasks_from_updated
     return completed_tasks, updated_tasks, new_tasks
 
 def chat_with_gpt(history, user_id):
