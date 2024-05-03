@@ -53,6 +53,26 @@ def chat_with_gpt(history, user_id):
 def is_task_progress(message):
     return message.lower().startswith('!!progress')
 
+def update_task_tracker(service, message):
+    completed_tasks, updated_tasks, new_tasks = analyze_message(message)
+    mark_tasks_as_completed(completed_tasks, service)
+    add_new_tasks(new_tasks, service)
+
+    return completed_tasks, updated_tasks, new_tasks
+
+ENSURE_NO_TASKS_ARE_MISSED_PROMPT = """
+I was speaking to a bot about my tasks. 
+I wrote a message and bot replied. 
+Analyze my message and tell which task I have accomplished.
+Use bot's answer as a hint to update my task list.
+===
+Here goes my message:
+{message}
+===
+Here goes bot's response:
+{response}
+"""
+
 # Message handler function
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -64,18 +84,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_message = update.message.text
     conv_history.add_message(user_id, "user", {'role': 'user', 'content': tg_message})
 
-    # Analyze the message using GPT-4
-    if is_task_progress(tg_message):
-        completed_tasks, updated_tasks, new_tasks = analyze_message(tg_message)
-        mark_tasks_as_completed(completed_tasks, service)
-        add_new_tasks(new_tasks, service)
-
+    if not is_task_progress(tg_message):
+        response_message = chat_with_gpt(conv_history, user_id)
+        additional_tasks_analysis_msg = ENSURE_NO_TASKS_ARE_MISSED_PROMPT.format(message=tg_message, response=response_message) 
+        completed_tasks, updated_tasks, new_tasks = update_task_tracker(service, additional_tasks_analysis_msg)
+        response_message = response_message + "\n\n\nAnalysis results:\n" + create_response_message(completed_tasks, updated_tasks, new_tasks)
+    else:
+        completed_tasks, updated_tasks, new_tasks = update_task_tracker(service, tg_message)
         # Respond back to the user with the changes
         response_message = create_response_message(completed_tasks, updated_tasks, new_tasks)
-    else:
-        response_message = chat_with_gpt(conv_history, user_id)
+
     conv_history.add_message(user_id, "bot", {'role':'assistant','content':response_message})
-    await update.message.reply_text(response_message)
+
+    MAX_MESSAGE_LENGTH = 4096
+    messages = []
+    current_message = ""
+    for line in response_message.split('\n'):
+        if len(current_message) + len(line) + 1 > MAX_MESSAGE_LENGTH:  # +1 for the newline character
+            messages.append(current_message)
+            current_message = line
+        else:
+            current_message += '\n' + line if current_message else line
+    messages.append(current_message)  # append the last message
+
+    for message in messages:
+        await update.message.reply_text(message)
+
 
 def create_response_message(completed_tasks, updated_tasks, new_tasks):
     response_lines = []

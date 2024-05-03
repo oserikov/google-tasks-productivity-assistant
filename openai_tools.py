@@ -72,7 +72,7 @@ class OpenAIAgent:
 
 
 class TaskManagerAgent(OpenAIAgent):
-    TASK_UPDATE_PROMPT = "You are an intelligent task manager assistant. When user tells you what he's been working on, you will analyze his message to identify: \n1. Tasks he completed.\n2. Tasks he made progress on that are already in our list.\n3. New tasks that user might want to add.\nUser need clear and concise updates to manage tasks effectively.\nYou will output json with fields 'completed_tasks', 'updated_tasks' and 'new_tasks', respectively.Current user tasks are: \n\n {tasks}"
+    TASK_UPDATE_PROMPT = "You are an intelligent task manager assistant. When user tells you what he's been working on, you will analyze his message to identify: \n1. Tasks he completed.\n2. Tasks he made progress on that are already in our list.\n3. New tasks that user might want to add.\nUser need clear and concise updates to manage tasks effectively.\nYou will output json with fields 'completed_tasks', 'updated_tasks' and 'new_tasks', respectively. You may observe 'Analysis results' section in the conversation history. You DON'T HAVE to write this text: it is automatically generated later. Current user tasks are: \n\n {tasks}"
 
     def __init__(self, model):
         # todo cant I write better?
